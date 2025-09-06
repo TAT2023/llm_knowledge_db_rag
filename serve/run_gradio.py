@@ -4,6 +4,7 @@ from dotenv import load_dotenv, find_dotenv
 
 from chains.chain_rag import Chain_RAG
 from chains.chain_rag_with_history import Chain_RAG_with_history
+from chains.chain_chat_llm_with_history import Chain_chat_llm_with_history
 from tools.log import logger
 
 
@@ -40,7 +41,7 @@ class Chain_Manager:
     def __init__(self):
         self.chain_rag = {}
         self.chain_rag_with_history = {}
-        self.chain_llm = {}
+        self.chain_llm_with_history = {}
 
     def chain_rag_answer(self,question:str,model:str="openai",embedding:str="m3e",temperature:float=0.0,top_k:int=5):
         try:
@@ -67,6 +68,28 @@ class Chain_Manager:
         except Exception as e:
             logger.error(f"调用有历史记录问答链失败: {str(e)}",exc_info=True)
             return "",f"chain_rag_with_history error: {str(e)}"
+
+    def chain_llm_answer(self,question:str,model:str="openai",temperature:float=0.0):
+        try:
+            if model not in self.chain_llm_with_history:
+                logger.info(f"创建新的纯llm问答链: model={model}")
+                self.chain_llm_with_history[model] = Chain_chat_llm_with_history(model=model,temperature=temperature)
+            chain = self.chain_llm_with_history[model]
+            chat_history = chain.answer(question=question,temperature=temperature)
+            return "",chat_history
+        except Exception as e:
+            logger.error(f"调用纯llm问答链失败: {str(e)}",exc_info=True)
+            return "",f"chain_llm error: {str(e)}"
+    
+    def clear_all_history(self):
+        """清除所有问答链的历史记录"""
+        for key, chain in self.chain_rag_with_history.items():
+            chain.clear_history()
+            logger.info(f"清除有历史记录问答链 {key} 的历史记录")
+        
+        for key, chain in self.chain_llm_with_history.items():
+            chain.clear_history()
+            logger.info(f"清除纯llm问答链 {key} 的历史记录")
 
 def create_db_from_files(files, embeddings="m3e"):
     logger.info(f"start to create vector db from files: {files} with embeddings: {embeddings}")
@@ -158,7 +181,11 @@ with block as demo:
         
         db_wo_his_btn(chain_manager.chain_rag_answer,
                       inputs=[msg, llm, embeddings, temperature, top_k], outputs=[msg, chatbot])
-
+        
+        llm_btn(chain_manager.chain_llm_answer,
+                inputs=[msg, llm, temperature], outputs=[msg, chatbot])
+        
+        clear.click()
 # 启动前关闭可能存在的其他 Gradio 应用实例
 gr.close_all()
 
