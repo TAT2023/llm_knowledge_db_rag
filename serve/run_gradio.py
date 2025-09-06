@@ -3,10 +3,18 @@ import gradio as gr
 
 from tools.log import logger
 
+from dotenv import load_dotenv, find_dotenv
+
+# 从 .env 文件中读取环境变量避免将敏感信息（如API密钥）硬编码到代码中
+_=load_dotenv(find_dotenv())
+
+
+
 AIGC_AVATAR_PATH = "./figures/aigc_avatar.png"
 DATAWHALE_AVATAR_PATH = "./figures/datawhale_avatar.png"
 AIGC_LOGO_PATH = "./figures/aigc_logo.png"
 DATAWHALE_LOGO_PATH = "./figures/datawhale_logo.png"
+
 
 
 LLM_MODEL_DICT = {
@@ -19,6 +27,9 @@ LLM_MODEL_LIST = sum(list(LLM_MODEL_DICT.values()),[])
 INIT_LLM = "chatglm_std"
 EMBEDDING_MODEL_LIST = ['zhipuai', 'openai', 'm3e']
 INIT_EMBEDDING_MODEL = "m3e"
+
+
+
 
     
 def create_db_from_files(files, embeddings="m3e"):
