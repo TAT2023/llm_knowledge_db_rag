@@ -1,9 +1,11 @@
 import gradio as gr
 
+from dotenv import load_dotenv, find_dotenv
 
+from chains.chain_rag import Chain_RAG
+from chains.chain_rag_with_history import Chain_RAG_with_history
 from tools.log import logger
 
-from dotenv import load_dotenv, find_dotenv
 
 # 从 .env 文件中读取环境变量避免将敏感信息（如API密钥）硬编码到代码中
 _=load_dotenv(find_dotenv())
@@ -31,11 +33,47 @@ INIT_EMBEDDING_MODEL = "m3e"
 
 
 
-    
+class Chain_Manager:
+    """
+    管理不同的问答链
+    """
+    def __init__(self):
+        self.chain_rag = {}
+        self.chain_rag_with_history = {}
+        self.chain_llm = {}
+
+    def chain_rag_answer(self,question:str,model:str="openai",embedding:str="m3e",temperature:float=0.0,top_k:int=5):
+        try:
+            if (model,embedding) not in self.chain_rag:
+                logger.info(f"创建新的无历史记录问答链: model={model}, embedding={embedding}")
+                self.chain_rag[(model,embedding)] = Chain_RAG(model=model,embedding=embedding,temperature=temperature,top_k=top_k)
+            chain = self.chain_rag[(model,embedding)]
+            response = chain.answer(question=question,temperature=temperature,top_k=top_k)
+            return "",response
+
+        except Exception as e:
+            logger.error(f"调用无历史记录问答链失败: {str(e)}",exc_info=True)
+            return "",f"chain_rag error: {str(e)}"
+
+    def chain_rag_with_history_answer(self,question:str,chat_history:list=[],model:str="openai",embedding:str="m3e",temperature:float=0.0,top_k:int=5):
+        try:
+            if (model,embedding) not in self.chain_rag_with_history:
+                logger.info(f"创建新的有历史记录问答链: model={model}, embedding={embedding}")
+                self.chain_rag_with_history[(model,embedding)] = Chain_RAG_with_history(model=model,embedding=embedding,temperature=temperature,top_k=top_k,chat_history=chat_history)
+            chain = self.chain_rag_with_history[(model,embedding)]
+            chat_history = chain.answer(question=question,temperature=temperature,top_k=top_k)
+            return "",chat_history
+
+        except Exception as e:
+            logger.error(f"调用有历史记录问答链失败: {str(e)}",exc_info=True)
+            return "",f"chain_rag_with_history error: {str(e)}"
+
 def create_db_from_files(files, embeddings="m3e"):
     logger.info(f"start to create vector db from files: {files} with embeddings: {embeddings}")
 
 
+
+chain_manager = Chain_Manager()
 
 block = gr.Blocks()
 
@@ -115,7 +153,11 @@ with block as demo:
         init_db.click(create_db_from_files,
                       inputs=[file, embeddings], outputs=[msg])
         
-
+        db_with_his_btn(chain_manager.chain_rag_with_history_answer,
+                        inputs=[msg, chatbot, llm, embeddings, temperature, top_k], outputs=[msg, chatbot])
+        
+        db_wo_his_btn(chain_manager.chain_rag_answer,
+                      inputs=[msg, llm, embeddings, temperature, top_k], outputs=[msg, chatbot])
 
 # 启动前关闭可能存在的其他 Gradio 应用实例
 gr.close_all()
