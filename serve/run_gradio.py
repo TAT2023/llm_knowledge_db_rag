@@ -104,5 +104,12 @@ with block as demo:
         init_db.click(create_db_from_files,
                       inputs=[file, embeddings], outputs=[msg])
         
-        
+
+
+# 启动前关闭可能存在的其他 Gradio 应用实例
+gr.close_all()
+
+# gradio,启动！
+demo.launch()
+
 

@@ -13,9 +13,10 @@ from tools.log import logger
 
 import embedding.call_embedding as get_embedding
 
-DEFAULT_KNOWLEDGE_PATH = "./knowledge"
 
-DEFAULT_PERSIST_PATH = "./vector_db"
+DEFAULT_KNOWLEDGE_PATH = "./knowledge"
+DEFAULT_PERSIST_PATH = "./vector_db/chroma"
+
 
 def get_files(dir_path):
     file_list = []
