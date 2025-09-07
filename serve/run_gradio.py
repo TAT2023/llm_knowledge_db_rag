@@ -1,12 +1,12 @@
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 import gradio as gr
 
 from dotenv import load_dotenv, find_dotenv
 from chains.chain_manager import Chain_Manager
 from tools.log import logger
-
-import os
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 # 从 .env 文件中读取环境变量避免将敏感信息（如API密钥）硬编码到代码中
 _=load_dotenv(find_dotenv())
@@ -117,13 +117,13 @@ with block as demo:
         init_db.click(create_db_from_files,
                       inputs=[file, embeddings], outputs=[msg])
         
-        db_with_his_btn(chain_manager.chain_rag_with_history_answer,
+        db_with_his_btn.click(chain_manager.chain_rag_with_history_answer,
                         inputs=[msg, chatbot, llm, embeddings, temperature, top_k], outputs=[msg, chatbot])
         
-        db_wo_his_btn(chain_manager.chain_rag_answer,
+        db_wo_his_btn.click(chain_manager.chain_rag_answer,
                       inputs=[msg, llm, embeddings, temperature, top_k], outputs=[msg, chatbot])
         
-        llm_btn(chain_manager.chain_llm_answer,
+        llm_btn.click(chain_manager.chain_llm_answer,
                 inputs=[msg, llm, temperature], outputs=[msg, chatbot])
         
         clear.click(chain_manager.clear_all_history,outputs=[chatbot])

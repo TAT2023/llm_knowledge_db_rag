@@ -52,7 +52,7 @@ class Chain_Manager:
                 self.chain_rag[(model,embedding)] = Chain_RAG(model=model,embedding=embedding,temperature=temperature,top_k=top_k)
             chain = self.chain_rag[(model,embedding)]
             response = chain.answer(question=question,temperature=temperature,top_k=top_k)
-            return "",response
+            return "",[(question, response)]  # 返回单条对话记录
 
         except Exception as e:
             logger.error(f"调用无历史记录问答链失败: {str(e)}",exc_info=True)

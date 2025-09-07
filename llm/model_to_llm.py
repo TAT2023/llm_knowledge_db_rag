@@ -5,6 +5,7 @@ import os
 
 from langchain_community.chat_models import QianfanChatEndpoint 
 from langchain_community.chat_models import ChatSparkLLM
+from langchain_community.chat_models import ChatZhipuAI
 from langchain.chat_models import ChatOpenAI
 from langchain.utils import get_from_dict_or_env
 
@@ -18,16 +19,15 @@ def parse_llm_api_key(model: str,env_file:dict()=None):
         env_file = os.environ
     
     if model == "openai":
-        return get_from_dict_or_env(env_file, "OPENAI_API_KEY")
+        return env_file.get("OPENAI_API_KEY","")
     
     elif model == "wenxin":
-        return get_from_dict_or_env(env_file, "WENXIN_API_KEY", "WENXIN_SECRET_KEY")
+        return env_file.get("WENXIN_API_KEY",""),env_file.get("WENXIN_SECRET_KEY","")
 
     elif model == "spark":
-        return get_from_dict_or_env(env_file, "SPARK_API_KEY", "SPARK_APPID", "SPARK_API_SECRET")
-
+        return env_file.get("SPARK_API_KEY",""),env_file.get("SPARK_APPID",""),env_file.get("SPARK_API_SECRET","")
     elif model == "zhipuai":
-        return get_from_dict_or_env(env_file, "ZHIPUAI_API_KEY", "ZHIPUAI_API_SECRET")
+        return env_file.get("ZHIPUAI_API_KEY","")
 
 
 
@@ -52,7 +52,7 @@ def model_to_llm(model:str,temperature:float=0.0):
         llm = ChatSparkLLM(model_name=model, temperature=temperature, api_key=api_key, appid=appid, secret_key=api_secret)
     elif model in ["chatglm_pro", "chatglm_std", "chatglm_lite"]:
         api_key = parse_llm_api_key("zhipuai")
-        llm = QianfanChatEndpoint(model_name=model, temperature=temperature, api_key=api_key)
+        llm = ChatZhipuAI(model_name=model, temperature=temperature, api_key=api_key)
     else:
         raise ValueError(f"model{model} not support!!!")
     return llm

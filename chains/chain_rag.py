@@ -3,10 +3,11 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import RetrievalQA
 
 from database.call_vectordb import get_vectordb
-from llm import model_to_llm
+from llm.model_to_llm import model_to_llm
 
 from tools.log import logger
 import time
+import re
 
 class Chain_RAG:
     """
@@ -36,24 +37,41 @@ class Chain_RAG:
         self.top_k = top_k
         self.embedding = embedding
         self.template = template
-        self.llm = model_to_llm(model,self.temperature)
-        self.vector_db = get_vectordb(embedding=embedding)
 
+        try:
+            self.llm = model_to_llm(model,self.temperature)
+            logger.info(f"创建Chain_RAG时加载LLM模型 {model} 成功")
+        
+        except Exception as e:
+            logger.error(f"创建Chain_RAG时加载LLM模型 {model} 失败: {str(e)}",exc_info=True)
+            raise  # 继续抛出异常
+
+        try:
+            self.vector_db = get_vectordb(embedding=embedding)
+            logger.info(f"创建Chain_RAG时加载向量数据库 {embedding} 成功")
+        except Exception as e:
+            logger.error(f"创建Chain_RAG时加载向量数据库失败: {str(e)}", exc_info=True)
+            raise
+        
 
         self.chain_prompt = PromptTemplate(
             template=self.template,
             input_variables=["context","question"]
         )
 
-        self.retriever = self.vector_db.as_retriever(search_type="similarity",search_kwargs={"k":self.top_k})
-
-
-        self.chain = RetrievalQA.from_llm(
-            llm=self.llm,
-            retriever=self.retriever,
-            return_source_documents=True,
-            chain_type_kwargs={"prompt":self.chain_prompt}
-        )
+        try:
+            start_time = time.time()
+            self.retriever = self.vector_db.as_retriever(search_type="similarity",search_kwargs={"k":self.top_k})
+            self.chain = RetrievalQA.from_llm(
+                llm=self.llm,
+                retriever=self.retriever,
+                return_source_documents=True,
+                prompt=self.chain_prompt
+            )
+            logger.info(f"创建Chain_RAG问答链成功 | 耗时 {time.time() - start_time} 秒")
+        except Exception as e:
+            logger.error(f"创建Chain_RAG问答链失败: {str(e)}", exc_info=True)
+            raise
     
     def answer(self,question:str=None,temperature:float=None,top_k:int=5):
         """
@@ -75,8 +93,9 @@ class Chain_RAG:
             logger.info(f"Chain_RAG开始调用answer | question: {question} | temperature: {temperature} | top_k: {top_k}")
             result = self.chain({"query":question})
             answer = result['result']
+            answer = re.sub(r"\\n", '<br/>', answer)
             source_docs = result['source_documents']
-            logger.info(f"Chain_RAG调用answer成功 | answer: {answer} | source_docs count: {len(source_docs)} | time cost: {time.time() - start_time}")
+            logger.info(f"Chain_RAG调用answer成功,耗时 {time.time() - start_time} 秒 | answer: {answer} | source_docs count: {len(source_docs)}")
         
         except Exception as e:
             logger.error(f"Chain_RAG调用answer失败 | error: {str(e)}",exc_info=True)

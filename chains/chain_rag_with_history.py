@@ -21,17 +21,33 @@ class Chain_RAG_with_history:
         self.top_k = top_k
         self.embedding = embedding
         self.chat_history = chat_history
-        self.llm = model_to_llm(model,self.temperature)
-        self.vector_db = get_vectordb(embedding=embedding)
-    
-        self.retriever = self.vector_db.as_retriever(search_type="similarity",search_kwargs={"k":top_k})
+        try:
+            self.llm = model_to_llm(model,self.temperature)
+            logger.info(f"创建Chain_RAG_with_history时加载LLM模型 {model} 成功")
+        except Exception as e:
+            logger.error(f"创建Chain_RAG_with_history时加载LLM模型 {model} 失败: {str(e)}",exc_info=True)
+            raise
+        try:
+            self.vector_db = get_vectordb(embedding=embedding)
+            logger.info(f"创建Chain_RAG_with_history时加载向量数据库 {embedding} 成功")
+        except Exception as e:
+            logger.error(f"创建Chain_RAG_with_history时加载向量数据库 {embedding} 失败: {str(e)}",exc_info=True)
+            raise
 
-        self.chain = ConversationalRetrievalChain.from_llm(
-            llm=self.llm,
-            retriever=self.retriever,
-            return_source_documents=True,
-            memory=ConversationBufferMemory(memory_key="chat_history",return_messages=True)
-        )
+        try:
+            start_time = time.time()
+            self.retriever = self.vector_db.as_retriever(search_type="similarity",search_kwargs={"k":top_k})
+            self.chain = ConversationalRetrievalChain.from_chain_type(
+                llm=self.llm,
+                retriever=self.retriever,
+                chain_type="stuff",
+                return_source_documents=True,
+                memory=ConversationBufferMemory(memory_key="chat_history",return_messages=True)
+            )
+            logger.info(f"创建Chain_RAG_with_history问答链成功 | 耗时 {time.time() - start_time} 秒")
+        except Exception as e:
+            logger.error(f"创建Chain_RAG_with_history问答链失败: {str(e)}",exc_info=True)
+            raise
 
     def clear_history(self):
         """清除历史记录"""
@@ -60,7 +76,7 @@ class Chain_RAG_with_history:
             answer = result["answer"]
 
             source_docs = result.get("source_documents",[])
-            logger.info(f"Chain_RAG_with_history调用完成，耗时 {time.time()-start_time:.2f} 秒 | answer: {answer} | source_docs_len: {len(source_docs)}")
+            logger.info(f"Chain_RAG_with_history调用完成,耗时 {time.time()-start_time:.2f} 秒 | answer: {answer} | source_docs_len: {len(source_docs)}")
             # 更新历史记录
             return self.chain.memory.chat_memory.messages
         except Exception as e:
