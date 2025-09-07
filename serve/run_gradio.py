@@ -4,6 +4,9 @@ from dotenv import load_dotenv, find_dotenv
 from chains.chain_manager import Chain_Manager
 from tools.log import logger
 
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 # 从 .env 文件中读取环境变量避免将敏感信息（如API密钥）硬编码到代码中
 _=load_dotenv(find_dotenv())

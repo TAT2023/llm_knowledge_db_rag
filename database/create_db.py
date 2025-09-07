@@ -9,9 +9,12 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 from langchain.vectorstores import Chroma
 
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 from tools.log import logger
 
-import embedding.call_embedding as get_embedding
+from embedding.call_embedding import get_embedding
 
 
 DEFAULT_KNOWLEDGE_PATH = "./knowledge"
@@ -42,14 +45,14 @@ def file_loader(file,loaders):
     elif file_type == 'txt':
         loaders.append(UnstructuredFileLoader(file))
 
-def create_db(files=DEFAULT_KNOWLEDGE_PATH,persist_dir=DEFAULT_PERSIST_PATH,embeddings="openai"):
+def create_db(files=DEFAULT_KNOWLEDGE_PATH,persist_dir=DEFAULT_PERSIST_PATH,embedding="openai"):
     "根据知识文件创建向量数据库"
 
     if files is None:
         logger.error("路径为空")
         return "can't load empty path"
     #检查file类型
-    if isinstance(files,list):
+    if not isinstance(files,list):
         files = [files]
     
     # 检查文件是否存在
@@ -107,9 +110,9 @@ def create_db(files=DEFAULT_KNOWLEDGE_PATH,persist_dir=DEFAULT_PERSIST_PATH,embe
     
     # 加载 Embedding 模型实例
     try:
-        if isinstance(embeddings,str):
-            embeddings = get_embedding(embeddings)
-        logger.info(f"使用的 Embedding 模型: {embeddings}")
+        if isinstance(embedding,str):
+            embedding = get_embedding(embedding)
+        logger.info(f"使用的 Embedding 模型: {embedding}")
     except Exception as e:
         logger.error(f"初始化 Embedding 模型时出错：{str(e)}",exc_info=True)
         return f"load embedding model error: {str(e)}"
@@ -123,7 +126,7 @@ def create_db(files=DEFAULT_KNOWLEDGE_PATH,persist_dir=DEFAULT_PERSIST_PATH,embe
     try:
         vectordb = Chroma.from_documents(
             documents=split_docs,
-            embeddings=embeddings,
+            embedding=embedding,
             persist_directory=persist_dir
         )
         # 验证数据库是否创建成功
@@ -144,4 +147,4 @@ def create_db(files=DEFAULT_KNOWLEDGE_PATH,persist_dir=DEFAULT_PERSIST_PATH,embe
 
 
 if __name__ == "__main__":
-    create_db(embeddings="m3e")
+    create_db(embedding="m3e")
